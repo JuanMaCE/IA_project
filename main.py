@@ -20,18 +20,11 @@ if not cap.isOpened():
     print("Error: No se pudo acceder a la cámara.")
     sys.exit()
 
-# ─── Escala de C mayor diatónica ──────────────────────────────────────────────
-# Cada nota tiene: tríada [root, 3ra, 5ta] y 7ma [root, 3ra, 5ta, 7ma]
-# Los intervalos son índices en NOTE_ORDER
 NOTE_ORDER = ["do", "re", "mi", "fa", "sol", "la", "si"]
 
-# Para cada nota raíz, sus grados diatónicos en C mayor
-# intervalo de 3ra: +2 posiciones, 5ta: +4, 7ma: +6 (todo módulo 7)
+
 def get_chord_notes(root_note, num_fingers):
-    """
-    num_fingers: 1=nota sola, 2=intervalo 3ra, 3=tríada, 4=acorde 7ma
-    Retorna lista de nombres de notas a sonar.
-    """
+
     if root_note not in NOTE_ORDER:
         return [root_note] if root_note else []
     idx = NOTE_ORDER.index(root_note)
@@ -46,7 +39,6 @@ def get_chord_notes(root_note, num_fingers):
                 NOTE_ORDER[(idx + 4) % 7], NOTE_ORDER[(idx + 6) % 7]]
     return [root_note]
 
-# Nombres de acordes diatónicos en C mayor
 CHORD_NAMES = {
     ("do",  3): "C",      ("do",  4): "Cmaj7",
     ("re",  3): "Dm",     ("re",  4): "Dm7",
@@ -57,7 +49,6 @@ CHORD_NAMES = {
     ("si",  3): "Bdim",   ("si",  4): "Bm7b5",
 }
 
-# ─── Geometría ────────────────────────────────────────────────────────────────
 
 def distance(a, b):
     return math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2 + (a.z-b.z)**2)
@@ -71,7 +62,6 @@ def angle_finger(base, mid, tip):
     return math.degrees(math.acos(val))
 
 def is_finger_open(wrist, pip, tip):
-    """True si el dedo está extendido."""
     deg = angle_finger(wrist, pip, tip)
     return 0 < deg < 55  # cerrado si NOT en este rango → abierto si SÍ
 
@@ -79,7 +69,6 @@ def finger_open(wrist, pip, tip):
     deg = angle_finger(wrist, pip, tip)
     return not (0 < deg < 55)  # True = abierto (igual que el original)
 
-# ─── Clasificar nota (MANO DERECHA) ───────────────────────────────────────────
 
 def classify_note(nodes):
     wrist    = nodes[0]
@@ -120,14 +109,9 @@ def classify_note(nodes):
         return "si"
     return None
 
-# ─── Contar dedos abiertos (MANO IZQUIERDA) ───────────────────────────────────
 
 def count_open_fingers_left(nodes):
-    """
-    Cuenta dedos abiertos en la mano izquierda.
-    Considera índice, medio, anular y meñique.
-    El pulgar se ignora para simplificar.
-    """
+
     wrist    = nodes[0]
     pairs = [
         (nodes[6],  nodes[8]),   # índice
@@ -141,18 +125,12 @@ def count_open_fingers_left(nodes):
             count += 1
     return max(1, count)  # mínimo 1 para que siempre suene algo
 
-# ─── Volumen por posición Y de muñeca ─────────────────────────────────────────
 
 def wrist_to_volume(wrist_y):
-    """
-    wrist_y está normalizado [0,1] donde 0=arriba, 1=abajo.
-    Arriba (y pequeño) → volumen alto, abajo (y grande) → volumen bajo.
-    Zona media (y≈0.5) → volumen intermedio (~0.5).
-    """
+
     vol = 1.0 - wrist_y  # invertir: arriba = 1.0, abajo = 0.0
     return max(0.05, min(1.0, vol))
 
-# ─── Carga de sonidos ─────────────────────────────────────────────────────────
 
 def load_sound(name):
     try:
@@ -170,7 +148,6 @@ def play_chord(notes, volume):
             s.set_volume(volume)
             s.play()
 
-# ─── Estabilizador ────────────────────────────────────────────────────────────
 
 class NoteStabilizer:
     def __init__(self, window=8, threshold=5):
@@ -195,7 +172,6 @@ class NoteStabilizer:
             self.stable = best
         return self.stable
 
-# ─── UI ───────────────────────────────────────────────────────────────────────
 
 PANEL_W = 290
 NOTE_DATA = {
@@ -209,7 +185,6 @@ NOTE_DATA = {
 }
 
 def draw_volume_bar(frame, volume, x, y, w, h_bar):
-    """Barra vertical de volumen."""
     cv2.rectangle(frame, (x, y), (x + w, y + h_bar), (30, 33, 50), -1)
     fill = int(h_bar * volume)
     color = (50, 220, 180)
@@ -267,7 +242,6 @@ def draw_ui(frame, stable_note, confidence, fps, num_fingers, volume, chord_note
 
     cv2.line(frame, (px + 10, 90 + 7*52 + 4), (w - 10, 90 + 7*52 + 4), (40, 44, 65), 1)
 
-    # Indicador de dedos (mano izquierda)
     fy = 90 + 7*52 + 18
     cv2.putText(frame, "Mano izq:", (px + 10, fy + 14),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.45, (120, 120, 160), 1)
@@ -278,7 +252,6 @@ def draw_ui(frame, stable_note, confidence, fps, num_fingers, volume, chord_note
         cv2.putText(frame, str(di + 1), (bx + 6, fy + 39),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 0, 0) if (di < num_fingers) else (50, 55, 75), 1)
 
-    # Nombre del acorde
     if chord_name:
         cv2.putText(frame, chord_name, (px + 155, fy + 40),
                     cv2.FONT_HERSHEY_DUPLEX, 0.9, (220, 220, 100), 2)
@@ -294,14 +267,12 @@ def draw_ui(frame, stable_note, confidence, fps, num_fingers, volume, chord_note
         cv2.rectangle(frame, (10, box_y1), (px - 50, box_y2), color, 2)
         cv2.putText(frame, stable_note, (30, box_y2 - 45),
                     cv2.FONT_HERSHEY_DUPLEX, 3.2, color, 4)
-        # Barra de confianza
         bar_max = px - 90
         bar_fill = int(bar_max * confidence)
         cv2.rectangle(frame, (30, box_y1 + 8), (30 + bar_max, box_y1 + 18), (30, 33, 50), -1)
         cv2.rectangle(frame, (30, box_y1 + 8), (30 + bar_fill, box_y1 + 18), color, -1)
         cv2.putText(frame, f"{int(confidence*100)}%", (30 + bar_max + 6, box_y1 + 18),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.42, color, 1)
-        # Notas del acorde debajo del nombre
         if len(chord_notes) > 1:
             chord_str = " + ".join(chord_notes)
             cv2.putText(frame, chord_str, (30, box_y2 - 14),
@@ -326,7 +297,6 @@ def draw_ui(frame, stable_note, confidence, fps, num_fingers, volume, chord_note
 
     return frame
 
-# ─── Loop principal ───────────────────────────────────────────────────────────
 
 stabilizer = NoteStabilizer(window=8, threshold=5)
 prev_time  = time.time()
@@ -366,12 +336,10 @@ with mp_hands.Hands(
                     results.multi_hand_landmarks, results.multi_handedness):
 
                 label = handedness.classification[0].label
-                # MediaPipe etiqueta "Right"/"Left" desde su perspectiva (imagen espejada),
-                # así que tras el flip: "Right" del modelo = mano DERECHA del usuario
+
                 nodes = hand_landmarks.landmark
 
                 if label == "Right":
-                    # ── Mano derecha: gesto de nota + volumen por muñeca ──────
                     mp_drawing.draw_landmarks(image, hand_landmarks,
                                               mp_hands.HAND_CONNECTIONS,
                                               lm_style, conn_style)
@@ -405,7 +373,6 @@ with mp_hands.Hands(
                 if s:
                     s.set_volume(current_volume)
 
-        # FPS
         now      = time.time()
         fps      = 1.0 / max(now - prev_time, 1e-6)
         prev_time = now
